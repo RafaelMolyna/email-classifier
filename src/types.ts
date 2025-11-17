@@ -1,7 +1,7 @@
 export interface ClassificationResult {
-  categoria: "Produtivo" | "Improdutivo";
-  sugestao_resposta: string;
-  proposito: string;
-  probabilidade: number;
-  justificativa_produtividade: string;
+  category: "Productive" | "Unproductive";
+  suggested_response: string;
+  purpose: string;
+  probability: number;
+  justification: string;
 }

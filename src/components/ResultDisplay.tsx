@@ -26,10 +26,10 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
     return null;
   }
 
-  const isProductive = result.categoria === "Produtivo";
+  const isProductive = result.category === "Productive";
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(result.sugestao_resposta);
+    navigator.clipboard.writeText(result.suggested_response);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -41,7 +41,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
     const textWidth = pageWidth - margin * 2;
     let yPos = 20;
 
-    // --- Helper para adicionar seções com quebra de linha ---
+    // --- Helper para add sections with line breaks ---
     const addSection = (
       title: string,
       content: string,
@@ -68,7 +68,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
       yPos += splitContent.length * (contentSize / 2.5) + 10;
     };
 
-    // --- Título ---
+    // --- Title ---
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.text("Relatório de Análise de Email", pageWidth / 2, yPos, {
@@ -83,32 +83,34 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
     });
     yPos += 15;
 
-    // --- Resumo da Análise ---
+    // --- Analysis sumary ---
     addSection(
       "Resumo da Análise",
-      `Categoria: ${result.categoria}\n` +
-        `Propósito: ${result.proposito}\n` +
-        `Nível de Produtividade: ${Math.round(result.probabilidade * 100)}%\n` +
-        `Justificativa: ${result.justificativa_produtividade}`,
+      `Categoria: ${
+        result.category === "Productive" ? "Produtivo" : "Improdutivo"
+      }\n` +
+        `Propósito: ${result.purpose}\n` +
+        `Nível de Produtividade: ${Math.round(result.probability * 100)}%\n` +
+        `Justificativa: ${result.justification}`,
       16,
       11
     );
 
-    // --- Sugestão de Resposta ---
-    addSection("Sugestão de Resposta", result.sugestao_resposta, 16, 11, true);
+    // --- Suggested response ---
+    addSection("Sugestão de Resposta", result.suggested_response, 16, 11, true);
 
-    // --- Linha Separadora ---
+    // --- Division Line ---
     doc.setDrawColor(220);
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 10;
 
-    // --- Email Original ---
+    // --- Original email ---
     addSection("Email Original Analisado", originalEmailText, 16, 10, true);
 
     doc.save("analise-de-email.pdf");
   };
 
-  const probabilityColor = `hsl(${result.probabilidade * 120}, 60%, 50%)`;
+  const probabilityColor = `hsl(${result.probability * 120}, 60%, 50%)`;
 
   return (
     <div className="w-full max-w-2xl mx-auto mt-8 animate-fade-in-up">
@@ -148,7 +150,9 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
                     isProductive ? "text-green-400" : "text-yellow-400"
                   }`}
                 >
-                  {result.categoria}
+                  {result.category === "Productive"
+                    ? "Produtivo"
+                    : "Improdutivo"}
                 </span>
               </p>
             </div>
@@ -157,7 +161,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
               <p className="text-lg">
                 <span className="font-semibold text-gray-400">Propósito: </span>
                 <span className="font-medium text-gray-300">
-                  {result.proposito}
+                  {result.purpose}
                 </span>
               </p>
             </div>
@@ -167,7 +171,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
                 <span className="font-semibold text-gray-400">
                   Justificativa:{" "}
                 </span>
-                {result.justificativa_produtividade}
+                {result.justification}
               </p>
             </div>
           </div>
@@ -182,7 +186,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
               <div
                 className="h-4 rounded-full transition-all duration-500"
                 style={{
-                  width: `${result.probabilidade * 100}%`,
+                  width: `${result.probability * 100}%`,
                   backgroundColor: probabilityColor,
                 }}
               ></div>
@@ -191,7 +195,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
               className="font-bold text-lg"
               style={{ color: probabilityColor }}
             >
-              {Math.round(result.probabilidade * 100)}%
+              {Math.round(result.probability * 100)}%
             </span>
           </div>
         </div>
@@ -202,7 +206,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
           </h3>
           <div className="relative bg-gray-900 p-4 rounded-lg border border-gray-700">
             <p className="text-gray-300 whitespace-pre-wrap">
-              {result.sugestao_resposta}
+              {result.suggested_response}
             </p>
             <button
               onClick={handleCopy}

@@ -2,6 +2,7 @@ import os
 import google.generativeai as genai
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+import json
 
 
 # Load environment variables
@@ -9,85 +10,88 @@ load_dotenv()
 app = Flask(__name__)
 
 # --- 1. Define the JSON schema in Python ---
-# This is the Python equivalent of the 'responseSchema' from your TS code.
-# It tells the AI *exactly* what to output.
+# This tells the AI EXACTLY what to output.
 classification_schema = {
     "type": "object",
     "properties": {
-        "categoria": {
+        "category": {
             "type": "string",
-            "enum": ["Produtivo", "Improdutivo"],
-            "description": "A categoria do email.",
+            "enum": ["Productive", "Unproductive"],
+            "description": "The category of the email.",
         },
-        "sugestao_resposta": {
+        "suggested_response": {
             "type": "string",
-            "description": "A sugestão de resposta para o email.",
+            "description": "The suggested response for the email.",
         },
-        "proposito": {
+        "purpose": {
             "type": "string",
-            "description": "O propósito principal do email.",
+            "description": "The main purpose of the email.",
         },
-        "probabilidade": {
+        "probability": {
             "type": "number",
-            "description": "A probabilidade de 0.0 a 1.0 de o email ser produtivo.",
+            "description": "The probability from 0.0 to 1.0 that the email is productive.",
         },
-        "justificativa_produtividade": {
+        "justification": {
             "type": "string",
-            "description": "A justificativa para a pontuação de produtividade.",
+            "description": "The justification for the productivity score.",
         },
     },
     "required": [
-        "categoria",
-        "sugestao_resposta",
-        "proposito",
-        "probabilidade",
-        "justificativa_produtividade",
+        "category",
+        "suggested_response",
+        "purpose",
+        "probability",
+        "justification",
     ],
 }
 
-# --- 2. Set the model name from your TS code ---
-# (This model was on your 'ListModels' output, so it's perfect)
+# --- 2. Create the System Instruction ---
+# This is sent ONCE when the model is initialized.
+system_prompt = """
+Analyze the following email text and classify it as 'Productive' or 'Unproductive'.
+- 'Productive': Emails that require a specific action or response and are work-related (e.g., support requests, case updates, system inquiries, scheduling work meetings).
+- 'Unproductive': Emails that do not require immediate action or are not work-related (e.g., greetings, thank-yous, spam, social event invitations).
+
+In addition to classification, perform the following tasks:
+1.  **Generate a short, professional suggested response**, appropriate for the email. **The suggested response must be in the same language as the original email.**
+2.  **Determine the email's main purpose** (e.g., 'Support Inquiry', 'Meeting Scheduling', 'Thank You', 'Social Invitation', 'Informational', 'Spam').
+3.  **Provide a probability from 0.0 to 1.0** indicating the chance the email is 'Productive'. 1.0 means certainty it is productive, and 0.0 means certainty it is unproductive.
+4.  **Provide a short justification (maximum 1 line) for the probability score**, mentioning factors such as language formality, clarity of the request, or the presence of non-work-related elements.
+5. **The justification (item 4) and the email's purpose (item 2) MUST be in Portuguese, and the suggested response (item 1) MUST be in the same language as the original email. Any other output MUST be in English.**
+
+
+You MUST respond only with the defined JSON format.
+"""
+
+# --- 3. Set the model name ---
 WORKING_MODEL_NAME = "gemini-2.5-flash"
 
 try:
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-    # --- 3. NEW: Configure the model to use JSON Mode ---
+    # --- 4. Configure the model with System Instruction ---
     model = genai.GenerativeModel(
         model_name=WORKING_MODEL_NAME,
         generation_config={
             "response_mime_type": "application/json",
             "response_schema": classification_schema,
         },
-        # We no longer need safety_settings, as JSON mode is highly structured.
-        # We also no longer need a system_instruction, as the prompt is so detailed.
+        system_instruction=system_prompt,
     )
 
 except Exception as e:
     print(f"Error initializing Gemini: {e}")
     model = None
 
-# --- REMOVED: preprocess_text() function ---
-# The new method does not use NLTK.
 
-
-# --- 4. NEW: The rich prompt from your TS code ---
+# --- 5. The prompt function ---
 def get_ai_prompt(email_text):
     """
-    Creates the prompt with the new, richer instructions.
+    Creates the simple prompt, sending only the new email.
+    The main instructions are already in the model's system_instruction.
     """
     return f"""
-    Analise o seguinte texto de e-mail e classifique-o como 'Produtivo' ou 'Improdutivo'.
-    - 'Produtivo': E-mails que requerem uma ação ou resposta específica e estão relacionados ao trabalho (ex.: solicitações de suporte, atualização sobre casos, dúvidas sobre o sistema, agendamento de reuniões de trabalho).
-    - 'Improdutivo': E-mails que não necessitam de uma ação imediata ou não são relacionados a trabalho (ex.: felicitações, agradecimentos, spam, convites para eventos sociais).
-
-    Além da classificação, execute as seguintes tarefas:
-    1.  **Gere uma sugestão de resposta curta e profissional**, apropriada para o e-mail.
-    2.  **Determine o propósito principal do email** (ex: 'Consulta de Suporte', 'Agendamento de Reunião', 'Agradecimento', 'Convite Social', 'Informativo', 'Spam').
-    3.  **Forneça uma probabilidade de 0.0 a 1.0** indicando a chance de o email ser 'Produtivo'. 1.0 significa certeza de que é produtivo, e 0.0 significa certeza de que é improdututivo.
-    4.  **Forneça uma justificativa curta (máximo 1 linha) para a pontuação de probabilidade**, mencionando fatores como a formalidade da linguagem, a clareza da solicitação ou a presença de elementos não relacionados ao trabalho.
-
-    E-mail para análise:
+    Email to be analyzed:
     ---
     {email_text}
     ---
@@ -104,33 +108,43 @@ def catch_all(path):
 
         try:
             data = request.json
-            raw_email_text = data.get("email")  # Get the original text
+            raw_email_text = data.get("email")
 
             if not raw_email_text:
                 return jsonify({"error": "No email text provided"}), 400
 
-            # --- 5. SIMPLIFIED: Just get the prompt and call the AI ---
+            # --- 5. Just get the prompt and call the AI ---
             prompt = get_ai_prompt(raw_email_text)
             response = model.generate_content(prompt)
 
-            # --- 6. SIMPLIFIED: No validation needed! ---
-            # The API *guarantees* response.text is a valid JSON string
-            # that matches our schema. No more 'try/except json.loads'.
+            # Validate the response *before* sending it.
+            try:
+                # Get the text
+                ai_text = response.text
 
-            return response.text, 200, {"Content-Type": "application/json"}
+                # Try to parse it to make sure it's not empty
+                json.loads(ai_text)
+
+                # If it's valid, send it
+                return ai_text, 200, {"Content-Type": "application/json"}
+
+            except (json.JSONDecodeError, ValueError):
+                # If 'response.text' was empty or invalid, this catches it.
+                print(
+                    f"AI returned an empty or invalid response. Raw response: {response.text}"
+                )
+                return (
+                    jsonify({"error": "The AI failed to generate a valid response."}),
+                    500,
+                )
 
         except Exception as e:
-            # This catches all OTHER errors
             print(f"Error during AI processing: {e}")
-            # The 'google.api_core.exceptions.InvalidArgument' error
-            # often means the AI *could not* fulfill the prompt
-            # (e.g., the text was just "hello").
             return jsonify({"error": f"AI processing error: {e}"}), 500
 
     # GET request handler
     return jsonify({"message": "Hello from the Python backend!"})
 
 
-# Main (unchanged)
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
