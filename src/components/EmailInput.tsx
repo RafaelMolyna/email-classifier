@@ -94,11 +94,42 @@ const EmailInput: React.FC<EmailInputProps> = ({ emailText, setEmailText, onAnal
     fileInputRef.current?.click();
   };
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setEmailText(text);
+        setFileError(null);
+      }
+    } catch (err) {
+      console.error("Failed to read clipboard contents: ", err);
+      setFileError(
+        "Não foi possível colar da área de transferência. Verifique as permissões do seu navegador."
+      );
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto bg-gray-800/60 p-6 rounded-2xl shadow-xl backdrop-blur-lg border border-gray-700">
-      <label htmlFor="email-input" className="block text-lg font-semibold mb-3 text-gray-300">
-        Cole o conteúdo do email ou arraste e solte um arquivo
-      </label>
+      <div className="flex items-center justify-between mb-3">
+        <label
+          htmlFor="email-input"
+          className="text-lg font-semibold text-gray-300"
+        >
+          {isTouchDevice
+            ? "Cole o conteúdo do email"
+            : "Cole o conteúdo do email ou arraste e solte um arquivo"}
+        </label>
+        <button
+          onClick={handlePaste}
+          disabled={isLoading || isFileProcessing}
+          className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          title="Colar da área de transferência"
+          aria-label="Colar da área de transferência"
+        >
+          <ClipboardIcon />
+        </button>
+      </div>
       <textarea
         id="email-input"
         value={emailText}
