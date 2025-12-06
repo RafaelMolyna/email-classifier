@@ -1,0 +1,28 @@
+services:
+  # Python Backend Service
+  backend:
+    build:
+      context: ./api # Look inside the api folder
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=development
+      # Pass the API key from your local .env file to the container
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./api:/app # Sync changes for hot-reload
+
+  # React Frontend Service
+  frontend:
+    build: .
+    ports:
+      - "5173:5173"
+    environment:
+      # Tell Vite to proxy API calls to the backend service
+      - VITE_API_URL=http://backend:5001
+    volumes:
+      - .:/app
+      - /app/node_modules # Protect container's node_modules
+    depends_on:
+      - backend

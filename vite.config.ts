@@ -1,14 +1,16 @@
-import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true, // Crucial for Docker
+    strictPort: true,
+    port: 5173,
     proxy: {
-      // This forwards any /api request to your Python server
       "/api": {
-        target: "http://localhost:5001",
+        // Use the env var if it exists (Docker), else fallback to localhost (Local)
+        target: process.env.VITE_API_URL || "http://localhost:5001",
         changeOrigin: true,
         secure: false,
       },
