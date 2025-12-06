@@ -1,6 +1,9 @@
 import os
 import google.generativeai as genai
 from flask import Flask, request, jsonify
+from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 import json
 
@@ -8,6 +11,15 @@ import json
 # Load environment variables
 load_dotenv()
 app = Flask(__name__)
+CORS(app, origins=["http://localhost:5173"])
+
+# This tells Flask to identify users by their IP address
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["100 per day", "20 per hour"],
+    storage_uri="memory://",
+)
 
 # --- 1. Define the JSON schema in Python ---
 # This tells the AI EXACTLY what to output.
@@ -147,4 +159,4 @@ def catch_all(path):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    app.run(debug=True, host="0.0.0.0", port=5001)
