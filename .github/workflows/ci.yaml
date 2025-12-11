@@ -53,7 +53,7 @@ jobs:
         env:
           GEMINI_API_KEY: "fake_key_for_testing"
         run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          export PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/api
           pytest api/tests/
 
   # --- Real AI Check (Only runs if updating prompts) ---
@@ -87,5 +87,5 @@ jobs:
         run: |
           pip install -r api/requirements.txt
           # Run as a module (-m) so imports work inside the api folder
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          export PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/api
           python -m api.tests.evaluate_prompt
