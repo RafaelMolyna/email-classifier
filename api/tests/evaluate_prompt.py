@@ -3,10 +3,10 @@ import json
 import os
 from dotenv import load_dotenv
 import google.generativeai as genai
-from api.index import (
-    get_ai_prompt,
-    system_prompt,
-    classification_schema,
+from api.index import get_ai_prompt
+from api.prompts import (
+    system_prompt_email_app as system_prompt,
+    classification_schema_email_app as classification_schema,
     WORKING_MODEL_NAME,
 )
 
