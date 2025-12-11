@@ -52,3 +52,93 @@ If you are on Windows, ensure you have **WSL 2** (Windows Subsystem for Linux) e
    git clone git@github.com:RafaelMolyna/email-classifier.git
    cd email-classifier
    ```
+
+2. Create a `.env` file in the root directory:
+
+   ```bash
+   # Create a file named .env and add your key
+   GEMINI_API_KEY=AIzaSy...<YOUR_KEY_HERE>
+   ```
+
+### Step 2: Launch the App
+
+Run this single command to build and start both the Frontend and Backend:
+
+```bash
+docker compose up
+```
+
+- **Frontend:** Open [http://localhost:5173](https://www.google.com/search?q=http://localhost:5173)
+- **Backend:** Running at [http://localhost:5001](https://www.google.com/search?q=http://localhost:5001)
+
+_Note: The first run may take a few minutes to download images. Subsequent runs will be instant._
+
+### 📦 Updating Dependencies
+
+If you add a new library to `package.json` or `requirements.txt`, the Docker container needs to be rebuilt to install them.
+
+Run this command to force a rebuild:
+
+```bash
+docker compose up --build
+```
+
+**Tip:** If your app acts weird or says "Module not found" even though you installed it, running this command usually fixes it.
+
+---
+
+## 🐢 3. Legacy Setup (Manual)
+
+If you cannot use Docker, you can still run the project manually.
+
+### "No-Docker" Prerequisites
+
+- **Node.js** (v20+)
+- **Python** (v3.11+)
+
+### Backend (Python)
+
+```bash
+# 1. Create and activate venv
+python -m venv .venv
+# Windows: .\.venv\Scripts\Activate
+# Linux/Mac: source .venv/bin/activate
+
+# 2. Install dependencies
+pip install -r api/requirements.txt
+
+# 3. Run Server
+python api/index.py
+```
+
+### Frontend (Node)
+
+```bash
+# In a new terminal:
+npm install
+npm run dev
+```
+
+---
+
+## 🧪 4. Testing & CI/CD
+
+This project uses a **Continuous Integration** pipeline to ensure stability.
+
+### Local Tests
+
+You can run the unit tests locally (requires `pytest` installed):
+
+```bash
+# Run the backend logic tests (Mocked AI)
+pytest api/tests/
+```
+
+### Automated Pipeline
+
+Every Pull Request to `main` triggers:
+
+1. **Frontend Build:** Checks for TypeScript errors.
+2. **Backend Linting:** Checks for Python syntax errors (`flake8`).
+3. **Unit Tests:** Verifies API logic using mocked responses.
+4. **Live AI Eval:** (Conditional) If prompt logic changes, the pipeline runs a real test against the Gemini API to ensure 100% accuracy on golden test cases.
