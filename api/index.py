@@ -59,7 +59,7 @@ def get_ai_prompt(email_text):
     """
 
 
-@app.route("/", defaults={"path": ""})
+@app.route("/", defaults={"path": ""}, methods=["GET", "POST"])
 @app.route("/<path:path>", methods=["GET", "POST"])
 def catch_all(path):
 
