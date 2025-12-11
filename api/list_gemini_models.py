@@ -7,6 +7,8 @@ load_dotenv()
 
 print("Connecting to Google AI...")
 
+models_list = []
+
 try:
     # Configure with your key
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
@@ -17,6 +19,11 @@ try:
         # We only care about models that can 'generateContent'
         if "generateContent" in m.supported_generation_methods:
             print(m.name)
+            models_list.append(m.name)
+
+    # Write the models list to a file
+    with open("models.txt", "w") as f:
+        f.write("\n".join(models_list))
 
     print("\nTest complete.")
 

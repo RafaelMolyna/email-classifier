@@ -1,0 +1,91 @@
+name: Production CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # --- Check Frontend (Does it build?) ---
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: 3. Install Dependencies
+        run: npm ci
+
+      - name: 4. Check for Crashes (Build)
+        run: npm run build
+
+  # --- Check Backend (Lint + Mock Tests) ---
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 3. Install Backend & Test Tools
+        run: |
+          pip install -r api/requirements.txt
+          pip install -r api/requirements-dev.txt
+
+      - name: 4. Linter Check (Style & Syntax)
+        # Fails if you have syntax errors or undefined variables
+        run: flake8 api --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: 5. Logic Tests (Mocked AI)
+        # Fails if your JSON parsing or API routes are broken
+        env:
+          GEMINI_API_KEY: "fake_key_for_testing"
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest api/tests/
+
+  # --- Real AI Check (Only runs if updating prompts) ---
+  ai-evaluation:
+    runs-on: ubuntu-latest
+    needs: backend # Don't run if the app is already broken
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            prompts:
+              - 'api/index.py' # Watch logic file
+              - 'api/evaluate_prompt.py' # Watch eval script
+
+      - name: Checkout & Setup
+        if: steps.changes.outputs.prompts == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        if: steps.changes.outputs.prompts == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Run Real AI Evaluation
+        if: steps.changes.outputs.prompts == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          pip install -r api/requirements.txt
+          # Run as a module (-m) so imports work inside the api folder
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          python -m api.evaluate_prompt
