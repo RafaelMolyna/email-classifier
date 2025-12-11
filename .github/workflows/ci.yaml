@@ -67,7 +67,7 @@ jobs:
           filters: |
             prompts:
               - 'api/index.py' # Watch logic file
-              - 'api/evaluate_prompt.py' # Watch eval script
+              - 'api/tests/evaluate_prompt.py' # Watch eval script
 
       - name: Checkout & Setup
         if: steps.changes.outputs.prompts == 'true'
@@ -88,4 +88,4 @@ jobs:
           pip install -r api/requirements.txt
           # Run as a module (-m) so imports work inside the api folder
           export PYTHONPATH=$PYTHONPATH:$(pwd)
-          python -m api.evaluate_prompt
+          python -m api.tests.evaluate_prompt
